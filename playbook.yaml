@@ -1,0 +1,182 @@
+# Install dependencies and set current user to be in docker group
+- hosts: all
+  tags:
+    - dependencies
+  tasks:
+    - name: Install apt dependencies
+      apt:
+        name:
+          - docker
+          - docker.io
+          - python3-pip
+        state: present
+        update-cache: yes
+
+    - name: Install pip dependencies
+      pip:
+        name:
+          - docker
+        state: present
+
+# Initialize docker infra
+- hosts: all
+  tags:
+    - infra
+  tasks:
+    - name: Create postgres volume
+      tags:
+        - postgres_volume
+      community.docker.docker_volume:
+        name: postgres_volume
+        state: present
+    
+    - name: Create node docker network
+      tags:
+        - docker_network
+      community.docker.docker_network:
+        name: node_network
+        state: present
+
+# Copy database dump file or only init file if no
+- hosts: all
+  tags:
+    - postgres
+  tasks:
+    - name: Copy postgres dump file 
+      tags:
+        - postgres_init_sql
+        - postgres_init
+      copy:
+        src: ./postgres/dump.sql
+        dest: /postgres_init.sql
+      register: postgres_dump_copy
+      ignore_errors: yes # Faled if no dump file exists
+    
+    - name: Copy init postgres file
+      tags:
+        - postgres_init_sql
+        - postgres_init
+      copy:
+        src: ./postgres/init.sql
+        dest: /postgres_init.sql
+      when: postgres_dump_copy is failed # Run onlly if no dump file exists
+    
+    - name: Copy init postgres file
+      tags:
+        - postgres_init
+      copy:
+        src: ./postgres/init.sh
+        dest: /postgres_init.sh
+    
+    - name: Run postgres in docker container
+      tags:
+        - postgres_init_docker
+      docker_container:
+        name: postgres
+        image: postgres:12
+        state: started
+        detach: yes
+        restart: yes
+        keep_volumes: yes
+        volumes:
+          - "postgres_volume:/postgres_volume"
+          - "/postgres_init.sh:/docker-entrypoint-initdb.d/init.sh"
+          - "/postgres_init.sql:/init.sql"
+        networks:
+          - name: node_network
+        network_mode: node_network
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_USER: "postgres"
+          POSTGRES_PASSWORD: "postgres"
+          POSTGRES_DB: "postgres"
+          PGDATA: "/postgres_volume"
+
+# Save database dump locally
+- hosts: all
+  tags:
+    - postgres_dump
+  tasks:
+    - name: Create and save postgres dump
+      command: docker exec postgres bash -c "PGPASSWORD=postgres pg_dump -C --column-inserts -U postgres -h localhost postgres"
+      register: postgres_dump
+    
+    - name: Test
+      local_action: copy content={{ postgres_dump.stdout }} dest=postgres_dump.sql
+
+# Run telegram bot
+- hosts: all
+  tags:
+    - telegram_bot
+  tasks:
+    - name: Copy telegram bot binary
+      copy:
+        src: "./telegram-bot/main"
+        dest: "/telegram-bot"
+        mode: '755'
+    
+    - name: Create telegram bot docker container
+      docker_container:
+        name: "telegram-bot"
+        image: alpine:3.15
+        state: started
+        detach: yes
+        restart: yes
+        recreate: yes
+        command: 'sh -c /telegram-bot'
+        volumes:
+          - "/telegram-bot:/telegram-bot:ro"
+        networks:
+          - name: node_network
+        network_mode: node_network
+        env:
+          DATABASE_URL: "postgres://postgres:postgres@postgres:5432/postgres"
+
+# Run database output
+- hosts: all
+  tags:
+    - db_output
+  tasks:
+    - name: Create db output directory
+      file:
+        path: /db-output
+        state: directory
+
+    - name: Copy output python script
+      copy:
+        src: "./db-output/download.py"
+        dest: "/db-output/download.py"
+        mode: '755'
+
+    - name: Copy db output Dockerfile
+      copy:
+        src: "./db-output/Dockerfile"
+        dest: "/db-output/Dockerfile"
+        mode: '755'
+
+    - name: Build an output image
+      docker_image:
+        name: db-output
+        tag: v1
+        state: present
+        source: build
+        build:
+          path: /db-output
+    
+    - name: Create db output docker container
+      docker_container:
+        name: "db-output"
+        image: db-output:v1
+        state: started
+        detach: yes
+        restart: yes
+        recreate: yes
+        networks:
+          - name: node_network
+        network_mode: node_network
+        ports:
+          - "80:80"
+        env:
+          CONNECTION_STRING: "postgresql+psycopg2://postgres:postgres@postgres:5432/postgres"
+    
