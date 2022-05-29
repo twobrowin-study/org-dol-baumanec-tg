@@ -2,6 +2,7 @@ package app
 
 import (
 	"strconv"
+	"context"
 	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -23,7 +24,13 @@ func (app *App) Execute() {
 
 	for update := range updates {
 		if update.Message != nil {
+
 			chatId := strconv.FormatInt(update.Message.Chat.ID, 10)
+			if app.isFuncActive("service") {
+				app.send(chatId, "Ведутся технические работы\nМы скоро увидимся вновь!")
+				continue
+			}
+
 			if update.Message.IsCommand() {
 				switch update.Message.Command() {
 				case "start":
@@ -31,11 +38,17 @@ func (app *App) Execute() {
 				case "help":
 					app.testUserActiceExecute(chatId, app.SendFullHelp)
 				case "doctorchecklist":
-					app.testUserActiceExecute(chatId, app.SendDoctorChecklist)
+					if app.isFuncActive("doctorchecklist") {
+						app.testUserActiceExecute(chatId, app.SendDoctorChecklist)
+					}
 				case "doctordone":
-					app.testUserActiceExecute(chatId, app.StartDoctorDone)
+					if app.isFuncActive("doctordone") {
+						app.testUserActiceExecute(chatId, app.StartDoctorDone)
+					}
 				case "find2phone":
-					app.testUserActiceExecute(chatId, app.StartFindPhone)
+					if app.isFuncActive("find2phone") {
+						app.testUserActiceExecute(chatId, app.StartFindPhone)
+					}
 				default:
 					app.SendTinyHelp(chatId)
 				}
@@ -43,7 +56,13 @@ func (app *App) Execute() {
 				app.testUserActiveAndCreationInput(chatId, update.Message.Text)
 			}
 		} else if update.CallbackQuery != nil && update.CallbackQuery.Message != nil {
+
 			chatId := strconv.FormatInt(update.CallbackQuery.Message.Chat.ID, 10)
+			if app.isFuncActive("service") {
+				app.send(chatId, "Ведутся технические работы\nМы скоро увидимся вновь!")
+				continue
+			}
+
 			switch update.CallbackQuery.Message.Text {
 			case doneTherapistCallText:
 				fallthrough
@@ -62,6 +81,12 @@ func (app *App) Execute() {
 			}
 		}
 	}
+}
+
+func (app *App) isFuncActive(funcStr string) bool {
+	ans := false
+	app.DbConnection.QueryRow(context.Background(), "select true from service_active where func=$1", funcStr).Scan(&ans)
+	return ans
 }
 
 func (app *App) testUserActiveAndCreationInput(chatId, messageText string) {

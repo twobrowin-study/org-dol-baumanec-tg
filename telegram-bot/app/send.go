@@ -12,16 +12,28 @@ var sexKeyboard = tgbotapi.NewReplyKeyboard(
 	),
 )
 
+func (app *App) avaliableFuncsDesc() string {
+	mesg := ""
+	if app.isFuncActive("doctordone") {
+		mesg += "\n\n" +
+				"Введи /doctordone для того чтобы отметить прохождение врача в чеклисте"
+	}
+	if app.isFuncActive("doctorchecklist") {
+		mesg += "\n\n" +
+				"Введи /doctorchecklist для просмотра твоего чеклиста врачей"
+	}
+	if app.isFuncActive("find2phone") {
+		mesg += "\n\n" +
+				"Eсли ты хочешь найти телефон кого-то из нашей команды - введи /find2phone"
+	}
+	return mesg
+}
+
 func (app *App) SendFullHelp(chatId string, user *User) {
 	mesg := "Привет, " + user.FirstName + "!" +
 			"\n\n" +
-			"Ты уже зарегистрирован!" +
-			"\n\n" +
-			"Введи /doctordone для того чтобы отметить прохождение врача в чеклисте" +
-			"\n" +
-			"или /doctorchecklist для просмотра твоего чеклиста врачей" +
-			"\n\n" +
-			"А если ты хочешь найти телефон кого-то из нашей команды - введи /find2phone"
+			"Ты уже зарегистрирован!"
+	mesg += app.avaliableFuncsDesc()
 	app.send(chatId, mesg)
 }
 
@@ -66,11 +78,8 @@ func (app *App) SendUserDone(chatId string) {
 }
 
 func (app *App) SendNextCommands(chatId string) {
-	mesg := "Теперь введи /doctordone для того чтобы отметить прохождение врача в чеклисте" +
-			"\n" +
-			"или /doctorchecklist для просмотра твоего чеклиста врачей" +
-			"\n\n" +
-			"А если ты хочешь найти телефон кого-то из нашей команды - введи /find2phone"
+	mesg := "Теперь сделай вот что:"
+	mesg += app.avaliableFuncsDesc()
 	app.send(chatId, mesg)
 }
 

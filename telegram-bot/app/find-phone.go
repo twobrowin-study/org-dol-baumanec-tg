@@ -56,7 +56,11 @@ func (app *App) CircleFindPhoneTitle(chatId string) {
 }
 
 func (app *App) CircleFindPhoneFinish(chatId string, user *User, title string) {
-	messagePrefix := fmt.Sprintf("Кружковод *%s*:", title)
+	messagePrefix := "Кружковод"
+	if title == "Театр" {
+		messagePrefix = "Кружководы"
+	} 
+	messagePrefix += fmt.Sprintf(" *%s*:", title)
 	app.sendFindPhone(chatId, messagePrefix, "post='circle' and title=$1", title)
 }
 
@@ -110,7 +114,7 @@ func (app *App) sendFindPhone(chatId, messagePrefix, where, param string) {
 	for rowsNext {
 		var name, phone string
 		rows.Scan(&name, &phone, &post_name)
-		messageText += fmt.Sprintf("  %s - %s", name, phone)
+		messageText += fmt.Sprintf("  %s %s", name, phone)
 		rowsNext = rows.Next()
 		if rowsNext {
 			messageText += "\n"
