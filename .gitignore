@@ -1,3 +1,6 @@
 *.xlsx
 dump.sql
 hosts.ini
+passwd.txt
+telegram-bot/main
+*/env.clear

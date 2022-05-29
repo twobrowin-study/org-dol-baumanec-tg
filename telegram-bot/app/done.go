@@ -21,7 +21,7 @@ func (app *App) StartDoctorDone(chatId string, user *User) {
 				tgbotapi.NewInlineKeyboardButtonData(title, idStr),
 			),
 		)
-		app.sendWithKeyboard(chatId, "Терапевт", therapistKeyboard)
+		app.sendWithKeyboard(chatId, doneTherapistCallText, therapistKeyboard)
 		return
 	}
 
@@ -41,7 +41,7 @@ func (app *App) StartDoctorDone(chatId string, user *User) {
 	analysisKeyboardMarkup := tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: analysisKeyboard,
 	}
-	app.sendWithKeyboard(chatId, "Анализы", analysisKeyboardMarkup)
+	app.sendWithKeyboard(chatId, doneAnalysisCallText, analysisKeyboardMarkup)
 
 	var doctorKeyboard [][]tgbotapi.InlineKeyboardButton
 	rowsDoctor, err := app.DbConnection.Query(context.Background(), "select id, title from user_doctor_to_go where chat_id=$1 and ready = false order by id", chatId)
@@ -59,7 +59,7 @@ func (app *App) StartDoctorDone(chatId string, user *User) {
 	doctorKeyboardMarkup := tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: doctorKeyboard,
 	}
-	app.sendWithKeyboard(chatId, "Врачи", doctorKeyboardMarkup)
+	app.sendWithKeyboard(chatId, doneDoctorCallText, doctorKeyboardMarkup)
 }
 
 func (app *App) SetDoctorDone(chatId string, user *User, doctorId string) {
@@ -87,15 +87,14 @@ func (app *App) SetDoctorDone(chatId string, user *User, doctorId string) {
 	var title string
 	var show bool = false
 	err = app.DbConnection.QueryRow(context.Background(), "select id, title, show from user_therapist_to_go where chat_id=$1 and ready = false", chatId).Scan(&id, &title, &show)
-	errExx("SetDoctorDone user_therapist_to_go", err)
-	if show {
+	if err == nil && show {
 		idStr := strconv.FormatInt(id, 10)
 		therapistKeyboard := tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData(title, idStr),
 			),
 		)
-		app.sendWithKeyboard(chatId, "Остался только *" + title + "*", therapistKeyboard)
+		app.sendWithKeyboard(chatId, doneTherapistLastCallText, therapistKeyboard)
 		return
 	}
 }

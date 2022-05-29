@@ -19,7 +19,9 @@ func (app *App) SendFullHelp(chatId string, user *User) {
 			"\n\n" +
 			"Введи /doctordone для того чтобы отметить прохождение врача в чеклисте" +
 			"\n" +
-			"или /doctorchecklist для просмотра твоего чеклиста врачей"
+			"или /doctorchecklist для просмотра твоего чеклиста врачей" +
+			"\n\n" +
+			"А если ты хочешь найти телефон кого-то из нашей команды - введи /find2phone"
 	app.send(chatId, mesg)
 }
 
@@ -66,7 +68,9 @@ func (app *App) SendUserDone(chatId string) {
 func (app *App) SendNextCommands(chatId string) {
 	mesg := "Теперь введи /doctordone для того чтобы отметить прохождение врача в чеклисте" +
 			"\n" +
-			"или /doctorchecklist для просмотра твоего чеклиста врачей"
+			"или /doctorchecklist для просмотра твоего чеклиста врачей" +
+			"\n\n" +
+			"А если ты хочешь найти телефон кого-то из нашей команды - введи /find2phone"
 	app.send(chatId, mesg)
 }
 
