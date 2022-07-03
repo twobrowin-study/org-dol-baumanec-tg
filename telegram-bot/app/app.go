@@ -8,6 +8,14 @@ import (
 const (
 	maleText = "муж."
 	femaleText = "жен."
+
+	doneTherapistCallText = "Терапевт"
+	doneTherapistLastCallText = "Остался только Терапевт"
+	doneAnalysisCallText = "Анализы"
+	doneDoctorCallText = "Врачи"
+	findPhonePostCallText = "Выбери кого ты ищешь"
+	findPhoneCircleCallText = "Выбери кружок"
+	findPhoneCounselorCallText = "Выбери номер отряда"
 )
 
 type App struct {

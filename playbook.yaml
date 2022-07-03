@@ -105,6 +105,16 @@
     - name: Test
       local_action: copy content={{ postgres_dump.stdout }} dest=postgres_dump.sql
 
+# Build telegram bot
+- hosts: localhost
+  tags:
+    - telegram_bot
+    - telegram_bot_build
+  connection: local
+  tasks:
+    - name: Build telegram bot
+      shell: "cd telegram-bot; CGO_ENABLED=0 go build -tags netgo -a -v main.go"
+
 # Run telegram bot
 - hosts: all
   tags:
@@ -117,6 +127,8 @@
         mode: '755'
     
     - name: Create telegram bot docker container
+      tags:
+        - telegram_bot_container
       docker_container:
         name: "telegram-bot"
         image: alpine:3.15

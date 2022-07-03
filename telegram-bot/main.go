@@ -20,17 +20,20 @@ func main() {
 	log.Println("Connected to database")
 
 	var tgToken, tgAdmin string
-	err = conn.QueryRow(context.Background(), "select token, admin from telegram_active_single").Scan(&tgToken, &tgAdmin)
+	var tgDebug bool
+	err = conn.QueryRow(context.Background(), "select token, admin, debug from telegram_active_single").Scan(&tgToken, &tgAdmin, &tgDebug)
 	if err != nil {
-		log.Fatal("Unable to get telegram token and admin data:", err)
+		log.Fatal("Unable to get telegram token, admin and debug data:", err)
 	}
-	log.Println("Got telegram token and admin data")
+	log.Println("Got telegram token, admin and debug data")
 
 	bot, err := tgbotapi.NewBotAPI(tgToken)
 	if err != nil {
 		log.Fatal("Unable to authorize on telegram bot account:", err)
 	}
 	log.Println("Authorized on telegram bot account", bot.Self.UserName)
+
+	bot.Debug = tgDebug
 
 	appObj, err := app.NewApp(conn, bot, tgAdmin)
 	if err != nil {

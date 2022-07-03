@@ -14,15 +14,15 @@ var sexKeyboard = tgbotapi.NewReplyKeyboard(
 
 func (app *App) avaliableFuncsDesc() string {
 	mesg := ""
-	if app.isFuncActive("doctordone") {
+	if app.CheckIfFuncActive("doctordone") {
 		mesg += "\n\n" +
 				"Введи /doctordone для того чтобы отметить прохождение врача в чеклисте"
 	}
-	if app.isFuncActive("doctorchecklist") {
+	if app.CheckIfFuncActive("doctorchecklist") {
 		mesg += "\n\n" +
 				"Введи /doctorchecklist для просмотра твоего чеклиста врачей"
 	}
-	if app.isFuncActive("find2phone") {
+	if app.CheckIfFuncActive("find2phone") {
 		mesg += "\n\n" +
 				"Eсли ты хочешь найти телефон кого-то из нашей команды - введи /find2phone"
 	}

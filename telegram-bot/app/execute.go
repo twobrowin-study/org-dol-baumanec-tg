@@ -2,18 +2,7 @@ package app
 
 import (
 	"strconv"
-	"context"
 	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
-)
-
-const (
-	doneTherapistCallText = "Терапевт"
-	doneTherapistLastCallText = "Остался только Терапевт"
-	doneAnalysisCallText = "Анализы"
-	doneDoctorCallText = "Врачи"
-	findPhonePostCallText = "Выбери кого ты ищешь"
-	findPhoneCircleCallText = "Выбери кружок"
-	findPhoneCounselorCallText = "Выбери номер отряда"
 )
 
 func (app *App) Execute() {
@@ -26,41 +15,44 @@ func (app *App) Execute() {
 		if update.Message != nil {
 
 			chatId := strconv.FormatInt(update.Message.Chat.ID, 10)
-			if app.isFuncActive("service") {
-				app.send(chatId, "Ведутся технические работы\nМы скоро увидимся вновь!")
+			if app.CheckIfUserCanNotGetResponce(chatId) {
 				continue
 			}
 
 			if update.Message.IsCommand() {
 				switch update.Message.Command() {
 				case "start":
-					app.testUserInacticeExecute(chatId, app.StartUserCreation)
+					app.CheckIfUserInacticeExecute(chatId, app.StartUserCreation)
 				case "help":
-					app.testUserActiceExecute(chatId, app.SendFullHelp)
+					app.CheckIfUserActiceExecute(chatId, app.SendFullHelp)
 				case "doctorchecklist":
-					if app.isFuncActive("doctorchecklist") {
-						app.testUserActiceExecute(chatId, app.SendDoctorChecklist)
+					if app.CheckIfFuncActive("doctorchecklist") {
+						app.CheckIfUserActiceExecute(chatId, app.SendDoctorChecklist)
 					}
 				case "doctordone":
-					if app.isFuncActive("doctordone") {
-						app.testUserActiceExecute(chatId, app.StartDoctorDone)
+					if app.CheckIfFuncActive("doctordone") {
+						app.CheckIfUserActiceExecute(chatId, app.StartDoctorDone)
 					}
 				case "find2phone":
-					if app.isFuncActive("find2phone") {
-						app.testUserActiceExecute(chatId, app.StartFindPhone)
+					if app.CheckIfFuncActive("find2phone") {
+						app.CheckIfUserActiceExecute(chatId, app.StartFindPhone)
 					}
 				default:
 					app.SendTinyHelp(chatId)
 				}
 			} else {
-				app.testUserActiveAndCreationInput(chatId, update.Message.Text)
+				app.CheckIfUserActiveAndCreationInput(chatId, update.Message.Text)
 			}
 		} else if update.CallbackQuery != nil && update.CallbackQuery.Message != nil {
 
 			chatId := strconv.FormatInt(update.CallbackQuery.Message.Chat.ID, 10)
-			if app.isFuncActive("service") {
-				app.send(chatId, "Ведутся технические работы\nМы скоро увидимся вновь!")
+			if app.CheckIfUserCanNotGetResponce(chatId) {
 				continue
+			}
+
+			callback := tgbotapi.NewCallback(update.CallbackQuery.ID, "")
+			if _, err := app.TelegramApi.Request(callback); err != nil {
+				panic(err)
 			}
 
 			switch update.CallbackQuery.Message.Text {
@@ -71,64 +63,14 @@ func (app *App) Execute() {
 			case doneAnalysisCallText:
 				fallthrough
 			case doneDoctorCallText:
-				app.testUserActiceExecuteCallback(chatId, update.CallbackQuery.Data, app.SetDoctorDone)
+				app.CheckIfUserActiceExecuteCallback(chatId, update.CallbackQuery.Data, app.SetDoctorDone)
 			case findPhonePostCallText:
-				app.testUserActiceExecuteCallback(chatId, update.CallbackQuery.Data, app.ProceedFindPhone)
+				app.CheckIfUserActiceExecuteCallback(chatId, update.CallbackQuery.Data, app.ProceedFindPhone)
 			case findPhoneCircleCallText:
-				app.testUserActiceExecuteCallback(chatId, update.CallbackQuery.Data, app.CircleFindPhoneFinish)
+				app.CheckIfUserActiceExecuteCallback(chatId, update.CallbackQuery.Data, app.CircleFindPhoneFinish)
 			case findPhoneCounselorCallText:
-				app.testUserActiceExecuteCallback(chatId, update.CallbackQuery.Data, app.CounselorFindPhoneFinish)
+				app.CheckIfUserActiceExecuteCallback(chatId, update.CallbackQuery.Data, app.CounselorFindPhoneFinish)
 			}
 		}
-	}
-}
-
-func (app *App) isFuncActive(funcStr string) bool {
-	ans := false
-	app.DbConnection.QueryRow(context.Background(), "select true from service_active where func=$1", funcStr).Scan(&ans)
-	return ans
-}
-
-func (app *App) testUserActiveAndCreationInput(chatId, messageText string) {
-	if user := app.ActiveUser(chatId); user != nil {
-		app.SendFullHelp(chatId, user)
-	} else if app.WaitingUserName(chatId) == true {
-		app.UserCreationName(chatId, messageText)
-	} else if app.WaitingUserSex(chatId) == true {
-		app.UserCreationSex(chatId, messageText)
-	} else if app.FaultUser(chatId) == true {
-		app.SendErrorHelp(chatId)
-	} else {
-		app.SendTinyHelp(chatId)
-	}
-}
-
-func (app *App) testUserInacticeExecute(chatId string, execInactive func(string)) {
-	if user := app.ActiveUser(chatId); user != nil {
-		app.SendFullHelp(chatId, user)
-	} else if app.FaultUser(chatId) == true {
-		app.SendErrorHelp(chatId)
-	} else {
-		execInactive(chatId)
-	}
-}
-
-func (app *App) testUserActiceExecute(chatId string, execActive func(string, *User)) {
-	if user := app.ActiveUser(chatId); user != nil {
-		execActive(chatId, user)
-	} else if app.FaultUser(chatId) == true {
-		app.SendErrorHelp(chatId)
-	} else {
-		app.SendTinyHelp(chatId)
-	}
-}
-
-func (app *App) testUserActiceExecuteCallback(chatId string, param string, execActive func(string, *User, string)) {
-	if user := app.ActiveUser(chatId); user != nil {
-		execActive(chatId, user, param)
-	} else if app.FaultUser(chatId) == true {
-		app.SendErrorHelp(chatId)
-	} else {
-		app.SendTinyHelp(chatId)
 	}
 }
